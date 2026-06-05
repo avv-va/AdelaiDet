@@ -1,0 +1,12 @@
+# Keep the build context small and prevent stale build artifacts / large data
+# dirs from being COPYed into the image (they're bind-mounted at runtime by
+# docker/adet.sh instead).
+.git
+**/__pycache__
+**/*.pyc
+**/*.so
+build
+*.egg-info
+datasets/phenobench
+output
+pretrained_models

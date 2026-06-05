@@ -1,3 +1,10 @@
+## How to train BoxInst on PhenoBench: 
+1. `python tools/convert_phenobench_to_coco.py --yolo-root <phenobench-yolo-bbox-path> --out-dir   datasets/phenobench/annotations`
+1. `docker/adet.sh build`
+2. `docker/adet.sh run`
+3. `python tools/train_net.py --config-file configs/BoxInst/phenobench_R_50_1x.yaml --num-gpus 8`
+
+--- 
 <div align="center">
     <img src="docs/adel-logo.svg" width="160" >
 </div>
