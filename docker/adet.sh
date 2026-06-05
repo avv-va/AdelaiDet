@@ -35,9 +35,12 @@ case "$cmd" in
 		# Source of the phenobench images (read from outside the repo). Override
 		# with PHENOBENCH_IMAGES=... if the dataset lives elsewhere.
 		PHENOBENCH_IMAGES="${PHENOBENCH_IMAGES:-/home/ava/data/phenobench-yolo/images}"
-		# tools/ and configs/ are bind-mounted so edits to the (pure-python)
-		# training script and config files take effect live, with no rebuild.
-		# adet/ stays baked into the image (it holds the compiled adet._C.so).
+		# tools/, configs/ and the pure-python adet subpackages (config/,
+		# modeling/, data/) are bind-mounted so edits take effect live, with no
+		# rebuild. adet/ itself is NOT mounted -- it holds the compiled
+		# adet/_C*.so, which only exists inside the image; mounting only the
+		# subpackages keeps that .so baked in while still picking up .py edits.
+		# Rebuild is only needed when the CUDA ops (adet/layers/csrc) change.
 		docker run --rm -it \
 			--gpus all \
 			--shm-size=16g \
@@ -47,6 +50,9 @@ case "$cmd" in
 			-v "$ROOT/output:/home/appuser/AdelaiDet/output" \
 			-v "$ROOT/tools:/home/appuser/AdelaiDet/tools" \
 			-v "$ROOT/configs:/home/appuser/AdelaiDet/configs" \
+			-v "$ROOT/adet/config:/home/appuser/AdelaiDet/adet/config" \
+			-v "$ROOT/adet/modeling:/home/appuser/AdelaiDet/adet/modeling" \
+			-v "$ROOT/adet/data:/home/appuser/AdelaiDet/adet/data" \
 			-v "$PHENOBENCH_IMAGES:/home/appuser/AdelaiDet/datasets/phenobench/images:ro" \
 			"$IMAGE" \
 			"${@:-/bin/bash}"

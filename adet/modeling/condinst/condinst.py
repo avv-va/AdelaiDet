@@ -96,6 +96,9 @@ class CondInst(nn.Module):
         self.pairwise_size = cfg.MODEL.BOXINST.PAIRWISE.SIZE
         self.pairwise_dilation = cfg.MODEL.BOXINST.PAIRWISE.DILATION
         self.pairwise_color_thresh = cfg.MODEL.BOXINST.PAIRWISE.COLOR_THRESH
+        
+        # boxverd configs
+        self.boxverd_enabled = cfg.MODEL.BOXVERD.ENABLED
 
         # build top module
         in_channels = self.proposal_generator.in_channels_to_top_module

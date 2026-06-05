@@ -1,0 +1,20 @@
+_BASE_: "Base-BoxVerd.yaml"
+MODEL:
+  WEIGHTS: "detectron2://ImageNetPretrained/MSRA/R-50.pkl"
+  RESNETS:
+    DEPTH: 50
+  FCOS:
+    NUM_CLASSES: 2          # crop, weed (default is 80 for COCO)
+DATASETS:
+  TRAIN: ("phenobench_train",)
+  TEST: ("phenobench_val",)
+SOLVER:
+  # 1407 train imgs / IMS_PER_BATCH 16 ~= 88 iters/epoch. 20000 iters ~= 227
+  # epochs.
+  IMS_PER_BATCH: 16
+  BASE_LR: 0.01
+  MAX_ITER: 50
+  STEPS: (14000, 18000)
+TEST:
+  EVAL_PERIOD: 25
+OUTPUT_DIR: "output/boxverd_phenobench"

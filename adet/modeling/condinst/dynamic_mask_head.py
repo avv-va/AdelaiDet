@@ -103,6 +103,9 @@ class DynamicMaskHead(nn.Module):
         soi = cfg.MODEL.FCOS.SIZES_OF_INTEREST
         self.register_buffer("sizes_of_interest", torch.tensor(soi + [soi[-1] * 2]))
 
+        # boxverd configs
+        self.boxverd_enabled = cfg.MODEL.BOXVERD.ENABLED
+
         # boxinst configs
         self.boxinst_enabled = cfg.MODEL.BOXINST.ENABLED
         self.bottom_pixels_removed = cfg.MODEL.BOXINST.BOTTOM_PIXELS_REMOVED

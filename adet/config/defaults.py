@@ -261,6 +261,10 @@ _C.MODEL.BOXINST.PAIRWISE.DILATION = 2
 _C.MODEL.BOXINST.PAIRWISE.WARMUP_ITERS = 10000
 _C.MODEL.BOXINST.PAIRWISE.COLOR_THRESH = 0.3
 
+# BoxVerd
+_C.MODEL.BOXVERD = CN()
+_C.MODEL.BOXVERD.ENABLED = False
+
 # ---------------------------------------------------------------------------- #
 # TOP Module Options
 # ---------------------------------------------------------------------------- #

@@ -6,16 +6,19 @@
 5. `python tools/train_net.py --config-file configs/BoxInst/phenobench_R_50_1x.yaml --num-gpus 8`
 
 ## Inference
-```
-python demo/demo.py \
-  --config-file output/boxinst_phenobench_r50_1x/config.yaml \
-  --input datasets/phenobench/images/val/06-05_00071_P0037822.png \
-  --output output/boxinst_phenobench_r50_1x/inference/06-05_00071_P0037822.png \
-  --confidence-threshold 0.3 \
-  --opts MODEL.WEIGHTS output/boxinst_phenobench_r50_1x/model_0009999.pth
-```
+1. `docker/adet.sh run`
+2. 
+  ```
+  python demo/demo.py \
+    --config-file output/boxinst_phenobench_r50_1x/config.yaml \
+    --input datasets/phenobench/images/val/06-05_00071_P0037822.png \
+    --output output/boxinst_phenobench_r50_1x/inference/06-05_00071_P0037822.png \
+    --confidence-threshold 0.3 \
+    --opts MODEL.WEIGHTS output/boxinst_phenobench_r50_1x/model_0009999.pth
+  ```
 ## Logs
 `tensorboard --logdir output/boxinst_phenobench_r50_1x/`
+
 --- 
 <div align="center">
     <img src="docs/adel-logo.svg" width="160" >
