@@ -28,14 +28,13 @@ case "$cmd" in
 		;;
 	run)
 		# Create host dirs so the bind-mounts don't materialize as root-owned.
+		# (incl. the phenobench image mountpoint, nested inside datasets/.)
 		mkdir -p "$ROOT/datasets/phenobench/annotations" \
-			"$ROOT/pretrained_models" "$ROOT/output"
-		# Source of the phenobench-yolo dataset (read from outside the repo).
-		# Override with PHENOBENCH_YOLO=... if it lives elsewhere. The whole root
-		# (images/ + labels/ + classes.txt) is mounted so the converter can run
-		# in-container; its images/ subdir is also mounted where the registered
-		# phenobench_{train,val} datasets expect them.
-		PHENOBENCH_YOLO="${PHENOBENCH_YOLO:-/home/ava/data/phenobench-yolo}"
+			"$ROOT/pretrained_models" "$ROOT/output" \
+			"$ROOT/datasets/phenobench/images"
+		# Source of the phenobench images (read from outside the repo). Override
+		# with PHENOBENCH_IMAGES=... if the dataset lives elsewhere.
+		PHENOBENCH_IMAGES="${PHENOBENCH_IMAGES:-/home/ava/data/phenobench-yolo/images}"
 		# tools/ and configs/ are bind-mounted so edits to the (pure-python)
 		# training script and config files take effect live, with no rebuild.
 		# adet/ stays baked into the image (it holds the compiled adet._C.so).
@@ -48,8 +47,7 @@ case "$cmd" in
 			-v "$ROOT/output:/home/appuser/AdelaiDet/output" \
 			-v "$ROOT/tools:/home/appuser/AdelaiDet/tools" \
 			-v "$ROOT/configs:/home/appuser/AdelaiDet/configs" \
-			-v "$PHENOBENCH_YOLO:/home/appuser/AdelaiDet/datasets/phenobench-yolo:ro" \
-			-v "$PHENOBENCH_YOLO/images:/home/appuser/AdelaiDet/datasets/phenobench/images:ro" \
+			-v "$PHENOBENCH_IMAGES:/home/appuser/AdelaiDet/datasets/phenobench/images:ro" \
 			"$IMAGE" \
 			"${@:-/bin/bash}"
 		;;

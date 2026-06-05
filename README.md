@@ -1,9 +1,21 @@
 ## How to train BoxInst on PhenoBench: 
-1. `python tools/convert_phenobench_to_coco.py --yolo-root <phenobench-yolo-bbox-path> --out-dir   datasets/phenobench/annotations`
-1. `docker/adet.sh build`
-2. `docker/adet.sh run`
-3. `python tools/train_net.py --config-file configs/BoxInst/phenobench_R_50_1x.yaml --num-gpus 8`
+1. `python tools/convert_phenobench_to_coco.py --yolo-root <phenobench-yolo-bbox-path> --out-dir datasets/phenobench/annotations`
+2. `wget -P pretrained_models https://github.com/hustvl/BoxTeacher/releases/download/v1.0/R-50.pkl`
+3. `docker/adet.sh build`
+4. `docker/adet.sh run`
+5. `python tools/train_net.py --config-file configs/BoxInst/phenobench_R_50_1x.yaml --num-gpus 8`
 
+## Inference
+```
+python demo/demo.py \
+  --config-file output/boxinst_phenobench_r50_1x/config.yaml \
+  --input datasets/phenobench/images/val/06-05_00071_P0037822.png \
+  --output output/boxinst_phenobench_r50_1x/inference/06-05_00071_P0037822.png \
+  --confidence-threshold 0.3 \
+  --opts MODEL.WEIGHTS output/boxinst_phenobench_r50_1x/model_0009999.pth
+```
+## Logs
+`tensorboard --logdir output/boxinst_phenobench_r50_1x/`
 --- 
 <div align="center">
     <img src="docs/adel-logo.svg" width="160" >
