@@ -264,6 +264,7 @@ _C.MODEL.BOXINST.PAIRWISE.COLOR_THRESH = 0.3
 # BoxVerd
 _C.MODEL.BOXVERD = CN()
 _C.MODEL.BOXVERD.ENABLED = False
+_C.MODEL.BOXVERD.SHUFFLER_NUM_OPER = 4
 
 # ---------------------------------------------------------------------------- #
 # TOP Module Options

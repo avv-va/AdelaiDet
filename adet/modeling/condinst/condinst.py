@@ -17,6 +17,7 @@ from .dynamic_mask_head import build_dynamic_mask_head
 from .mask_branch import build_mask_branch
 
 from adet.utils.comm import aligned_bilinear
+from .shuffler import Shuffler
 
 __all__ = ["CondInst"]
 
@@ -99,6 +100,7 @@ class CondInst(nn.Module):
         
         # boxverd configs
         self.boxverd_enabled = cfg.MODEL.BOXVERD.ENABLED
+        self.shuffler_num_oper = cfg.MODEL.BOXVERD.SHUFFLER_NUM_OPER
 
         # build top module
         in_channels = self.proposal_generator.in_channels_to_top_module
@@ -116,7 +118,16 @@ class CondInst(nn.Module):
         self.to(self.device)
 
     def forward(self, batched_inputs):
-        original_images = [x["image"].to(self.device) for x in batched_inputs]
+        if self.boxverd_enabled and self.training:
+            unshuffled_images, shuffled_images = [], []
+            shuffler = Shuffler(tile_shape=batched_inputs[0]['image'].shape[-2:], num_oper=self.shuffler_num_oper)
+            for x in batched_inputs:
+                image  = x["image"].to(self.device)
+                unshuffled_images.append(image)
+                shuffled_images.append(shuffler.shuffle(image.unsqueeze(0)).squeeze(0))
+            original_images = unshuffled_images + shuffled_images                
+        else:
+            original_images = [x["image"].to(self.device) for x in batched_inputs]
 
         # normalize images
         images_norm = [self.normalizer(x) for x in original_images]
