@@ -200,7 +200,24 @@ class DynamicMaskHead(nn.Module):
 
         return mask_logits
 
-    def __call__(self, mask_feats, mask_feat_stride, pred_instances, gt_instances=None):
+    def prepare_object1_pseudo_label(self, object0_deshuffled, object0_gt):
+        # Normalize the deshuffled prediction within the foreground (box) region so
+        # its peak is ~1, and zero it out in the background. The result is used as a
+        # soft pseudo label for the unshuffled prediction.
+        object1_pred = object0_deshuffled.detach().sigmoid()
+        foreground_mask = (object0_gt > 0).float()
+        object1_pseudo_label = object1_pred * foreground_mask
+        col_max = object1_pseudo_label.max(dim=2, keepdim=True).values
+        row_max = object1_pseudo_label.max(dim=3, keepdim=True).values
+        normalizer = (torch.minimum(col_max, row_max) + 1e-4) * foreground_mask
+        assert normalizer.shape == object1_pseudo_label.shape
+        background_mask = 1.0 - foreground_mask
+        normalizer = torch.maximum(normalizer, background_mask)
+        normalized_pseudo_label = object1_pseudo_label / normalizer
+        return normalized_pseudo_label
+
+    def __call__(self, mask_feats, mask_feat_stride, pred_instances, gt_instances=None,
+                 mask_feats_shuffled=None, shuffler=None):
         if self.training:
             self._iter += 1
 
@@ -212,7 +229,11 @@ class DynamicMaskHead(nn.Module):
 
             if len(pred_instances) == 0:
                 dummy_loss = mask_feats.sum() * 0 + pred_instances.mask_head_params.sum() * 0
-                if not self.boxinst_enabled:
+                if self.boxverd_enabled:
+                    dummy_loss = dummy_loss + mask_feats_shuffled.sum() * 0
+                    losses["loss_object0"] = dummy_loss
+                    losses["loss_object1"] = dummy_loss
+                elif not self.boxinst_enabled:
                     losses["loss_mask"] = dummy_loss
                 else:
                     losses["loss_prj"] = dummy_loss
@@ -222,8 +243,36 @@ class DynamicMaskHead(nn.Module):
                     mask_feats, mask_feat_stride, pred_instances
                 )
                 mask_scores = mask_logits.sigmoid()
+                
+                if self.boxverd_enabled:
+                    feat_shuffler = shuffler.scale(
+                        (1.0 / mask_feat_stride, 1.0 / mask_feat_stride)
+                    )
+                    mask_feats_deshuffled = feat_shuffler.unshuffle(mask_feats_shuffled)
 
-                if self.boxinst_enabled:
+                    object0_logits = self.mask_heads_forward_with_coords(
+                        mask_feats_deshuffled, mask_feat_stride, pred_instances
+                    )
+                    # (1) object0: the deshuffled prediction must match the box gt.
+                    # The max-based labeling used in the source codebase is equivalent
+                    # to the projection loss.
+                    loss_object0 = compute_project_term(object0_logits.sigmoid(), gt_bitmasks)
+
+                    # (2) object1: the deshuffled prediction is used as a pseudo label
+                    # to supervise the unshuffled prediction.
+                    object1_pseudo_gt = self.prepare_object1_pseudo_label(
+                        object0_logits, gt_bitmasks
+                    )
+                    loss_object1 = F.binary_cross_entropy_with_logits(
+                        mask_logits, object1_pseudo_gt
+                    )
+
+                    losses.update({
+                        "loss_object0": loss_object0,
+                        "loss_object1": loss_object1,
+                    })
+
+                elif self.boxinst_enabled:
                     # box-supervised BoxInst losses
                     image_color_similarity = torch.cat([x.image_color_similarity for x in gt_instances])
                     image_color_similarity = image_color_similarity[gt_inds].to(dtype=mask_feats.dtype)

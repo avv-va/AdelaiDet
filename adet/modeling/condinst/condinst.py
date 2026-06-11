@@ -125,19 +125,32 @@ class CondInst(nn.Module):
                 image  = x["image"].to(self.device)
                 unshuffled_images.append(image)
                 shuffled_images.append(shuffler.shuffle(image.unsqueeze(0)).squeeze(0))
-            original_images = unshuffled_images + shuffled_images                
+            original_images = unshuffled_images + shuffled_images
         else:
+            shuffler = None
             original_images = [x["image"].to(self.device) for x in batched_inputs]
 
         # normalize images
         images_norm = [self.normalizer(x) for x in original_images]
         images_norm = ImageList.from_tensors(images_norm, self.backbone.size_divisibility)
-
         features = self.backbone(images_norm.tensor)
 
         if "instances" in batched_inputs[0]:
             gt_instances = [x["instances"].to(self.device) for x in batched_inputs]
-            if self.boxinst_enabled:
+
+            if self.boxverd_enabled:
+                # build bitmasks from only the unshuffled images
+                original_image_masks = [torch.ones_like(x[0], dtype=torch.float32) for x in unshuffled_images]
+                unshuffled_images = ImageList.from_tensors(unshuffled_images, self.backbone.size_divisibility)
+                original_image_masks = ImageList.from_tensors(
+                    original_image_masks, self.backbone.size_divisibility, pad_value=0.0
+                )
+                self.add_bitmasks_from_boxes(
+                    gt_instances, unshuffled_images.tensor, original_image_masks.tensor,
+                    unshuffled_images.tensor.size(-2), unshuffled_images.tensor.size(-1)
+                )
+
+            elif self.boxinst_enabled:
                 original_image_masks = [torch.ones_like(x[0], dtype=torch.float32) for x in original_images]
 
                 # mask out the bottom area where the COCO dataset probably has wrong annotations
@@ -163,14 +176,30 @@ class CondInst(nn.Module):
         else:
             gt_instances = None
 
-        mask_feats, sem_losses = self.mask_branch(features, gt_instances)
+        if self.boxverd_enabled and self.training:
+            num_images = len(batched_inputs)
+            features_unshuffled = {k: v[:num_images] for k, v in features.items()}
+            features_shuffled = {k: v[num_images:] for k, v in features.items()}
+            mask_feats, sem_losses = self.mask_branch(features_unshuffled, gt_instances)
+            mask_feats_shuffled, _ = self.mask_branch(features_shuffled, gt_instances)
+            images_norm_unshuffled = ImageList(
+                images_norm.tensor[:num_images], images_norm.image_sizes[:num_images]
+            )
+            proposals, proposal_losses = self.proposal_generator(
+                images_norm_unshuffled, features_unshuffled, gt_instances, self.controller
+            )
+        else:
+            mask_feats, sem_losses = self.mask_branch(features, gt_instances)
+            mask_feats_shuffled = None
 
-        proposals, proposal_losses = self.proposal_generator(
-            images_norm, features, gt_instances, self.controller
-        )
+            proposals, proposal_losses = self.proposal_generator(
+                images_norm, features, gt_instances, self.controller
+            )
 
         if self.training:
-            mask_losses = self._forward_mask_heads_train(proposals, mask_feats, gt_instances)
+            mask_losses = self._forward_mask_heads_train(
+                proposals, mask_feats, gt_instances, mask_feats_shuffled, shuffler
+            )
 
             losses = {}
             losses.update(sem_losses)
@@ -178,6 +207,10 @@ class CondInst(nn.Module):
             losses.update(mask_losses)
             return losses
         else:
+            # At inference the images are never shuffled (shuffling is gated on
+            # self.training), so `mask_feats` are the unshuffled features. The mask
+            # head therefore returns the object1 (unshuffled) prediction as the
+            # segmentation mask, which is what we want for BoxVerd.
             pred_instances_w_masks = self._forward_mask_heads_test(proposals, mask_feats)
 
             padded_im_h, padded_im_w = images_norm.tensor.size()[-2:]
@@ -198,7 +231,7 @@ class CondInst(nn.Module):
 
             return processed_results
 
-    def _forward_mask_heads_train(self, proposals, mask_feats, gt_instances):
+    def _forward_mask_heads_train(self, proposals, mask_feats, gt_instances, mask_feats_shuffled=None, shuffler=None):
         # prepare the inputs for mask heads
         pred_instances = proposals["instances"]
 
@@ -240,8 +273,9 @@ class CondInst(nn.Module):
         pred_instances.mask_head_params = pred_instances.top_feats
 
         loss_mask = self.mask_head(
-            mask_feats, self.mask_branch.out_stride,
-            pred_instances, gt_instances
+                mask_feats, self.mask_branch.out_stride,
+                pred_instances, gt_instances,
+                mask_feats_shuffled=mask_feats_shuffled, shuffler=shuffler
         )
 
         return loss_mask

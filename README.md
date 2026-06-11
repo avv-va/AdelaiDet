@@ -3,7 +3,7 @@
 2. `wget -P pretrained_models https://github.com/hustvl/BoxTeacher/releases/download/v1.0/R-50.pkl`
 3. `docker/adet.sh build`
 4. `docker/adet.sh run`
-5. `python tools/train_net.py --config-file configs/BoxInst/phenobench_R_50_1x.yaml --num-gpus 8`
+5. `python tools/train_net.py --config-file configs/BoxVerd/phenobench.yaml --num-gpus 8`
 
 ## Inference
 1. `docker/adet.sh run`
