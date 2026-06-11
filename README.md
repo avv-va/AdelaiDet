@@ -10,11 +10,11 @@
 2. 
   ```
   python demo/demo.py \
-    --config-file output/boxinst_phenobench_r50_1x/config.yaml \
-    --input datasets/phenobench/images/val/06-05_00071_P0037822.png \
-    --output output/boxinst_phenobench_r50_1x/inference/06-05_00071_P0037822.png \
-    --confidence-threshold 0.3 \
-    --opts MODEL.WEIGHTS output/boxinst_phenobench_r50_1x/model_0009999.pth
+    --config-file output/boxverd_phenobench/config.yaml \
+    --input datasets/phenobench/images/val/05-26_00174_P0034121.png \
+    --output output/boxverd_phenobench/inference/05-26_00174_P0034121.png \
+    --confidence-threshold 0.7 \
+    --opts MODEL.WEIGHTS output/boxverd_phenobench/model_final.pth
   ```
 ## Logs
 `tensorboard --logdir output/boxinst_phenobench_r50_1x/`

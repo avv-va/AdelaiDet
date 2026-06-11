@@ -245,14 +245,15 @@ class DynamicMaskHead(nn.Module):
                 mask_scores = mask_logits.sigmoid()
                 
                 if self.boxverd_enabled:
-                    feat_shuffler = shuffler.scale(
-                        (1.0 / mask_feat_stride, 1.0 / mask_feat_stride)
+                    object0_logits_shuffled = self.mask_heads_forward_with_coords(
+                        mask_feats_shuffled, mask_feat_stride, pred_instances
                     )
-                    mask_feats_deshuffled = feat_shuffler.unshuffle(mask_feats_shuffled)
-
-                    object0_logits = self.mask_heads_forward_with_coords(
-                        mask_feats_deshuffled, mask_feat_stride, pred_instances
+                    # mask logits are at mask_out_stride resolution (upsampled from
+                    # mask_feat_stride inside mask_heads_forward_with_coords).
+                    logit_shuffler = shuffler.scale(
+                        (1.0 / self.mask_out_stride, 1.0 / self.mask_out_stride)
                     )
+                    object0_logits = logit_shuffler.unshuffle(object0_logits_shuffled)
                     # (1) object0: the deshuffled prediction must match the box gt.
                     # The max-based labeling used in the source codebase is equivalent
                     # to the projection loss.
