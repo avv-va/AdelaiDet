@@ -127,14 +127,14 @@ class CondInst(nn.Module):
                 original_image_masks = [torch.ones_like(x[0], dtype=torch.float32) for x in original_images]
 
                 # mask out the bottom area where the COCO dataset probably has wrong annotations
-                for i in range(len(original_image_masks)):
-                    im_h = batched_inputs[i]["height"]
-                    pixels_removed = int(
-                        self.bottom_pixels_removed *
-                        float(original_images[i].size(1)) / float(im_h)
-                    )
-                    if pixels_removed > 0:
-                        original_image_masks[i][-pixels_removed:, :] = 0
+                # for i in range(len(original_image_masks)):
+                #     im_h = batched_inputs[i]["height"]
+                #     pixels_removed = int(
+                #         self.bottom_pixels_removed *
+                #         float(original_images[i].size(1)) / float(im_h)
+                #     )
+                #     if pixels_removed > 0:
+                #         original_image_masks[i][-pixels_removed:, :] = 0
 
                 original_images = ImageList.from_tensors(original_images, self.backbone.size_divisibility)
                 original_image_masks = ImageList.from_tensors(
