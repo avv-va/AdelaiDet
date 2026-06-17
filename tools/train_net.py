@@ -62,6 +62,27 @@ for _name, (_img_root, _json) in _PHENOBENCH.items():
     if _name not in DatasetCatalog.list():
         register_coco_instances(_name, {"thing_classes": ["crop", "weed"]}, _json, _img_root)
 
+# VOC_23_verdant (box-supervised): same pipeline as phenobench. YOLO-pose labels
+# from /home/ava/data/VOC_23_verdant converted to COCO by
+# tools/convert_phenobench_to_coco.py; BoxInst derives masks from the boxes.
+_VOC23_VERDANT = {
+    "voc23_verdant_train": (
+        "datasets/voc23_verdant/images/train",
+        "datasets/voc23_verdant/annotations/train.json",
+    ),
+    "voc23_verdant_val": (
+        "datasets/voc23_verdant/images/val",
+        "datasets/voc23_verdant/annotations/val.json",
+    ),
+    "voc23_verdant_test": (
+        "datasets/voc23_verdant/images/test",
+        "datasets/voc23_verdant/annotations/test.json",
+    ),
+}
+for _name, (_img_root, _json) in _VOC23_VERDANT.items():
+    if _name not in DatasetCatalog.list():
+        register_coco_instances(_name, {"thing_classes": ["bird", "boat"]}, _json, _img_root)
+
 
 class Trainer(DefaultTrainer):
     """
