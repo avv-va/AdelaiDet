@@ -227,17 +227,16 @@ class DynamicMaskHead(nn.Module):
 
                     loss_prj_term = compute_project_term(mask_scores, gt_bitmasks)
 
-                    # pairwise_losses = compute_pairwise_term(
-                    #     mask_logits, self.pairwise_size,
-                    #     self.pairwise_dilation
-                    # )
+                    pairwise_losses = compute_pairwise_term(
+                        mask_logits, self.pairwise_size,
+                        self.pairwise_dilation
+                    )
 
-                    # weights = (image_color_similarity >= self.pairwise_color_thresh).float() * gt_bitmasks.float()
-                    # loss_pairwise = (pairwise_losses * weights).sum() / weights.sum().clamp(min=1.0)
+                    weights = (image_color_similarity >= self.pairwise_color_thresh).float() * gt_bitmasks.float()
+                    loss_pairwise = (pairwise_losses * weights).sum() / weights.sum().clamp(min=1.0)
 
-                    # warmup_factor = min(self._iter.item() / float(self._warmup_iters), 1.0)
-                    # loss_pairwise = loss_pairwise * warmup_factor
-                    loss_pairwise = mask_logits.sum() * 0.0
+                    warmup_factor = min(self._iter.item() / float(self._warmup_iters), 1.0)
+                    loss_pairwise = loss_pairwise * warmup_factor
 
                     losses.update({
                         "loss_prj": loss_prj_term,

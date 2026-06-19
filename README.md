@@ -5,12 +5,12 @@
 4. `docker/adet.sh run`
 5. `python tools/train_net.py --config-file configs/BoxInst/voc23verdant1box_no_pairwise_loss.yaml --num-gpus 8`
 
-## Inference
+## Inference 
 ```
 python demo/demo.py \
   --config-file output/boxinst_voc23_verdant_1box_r50_1x/config.yaml \
-  --input datasets/voc23_verdant_1box/images/train/004799.jpg \
-  --output output/boxinst_voc23_verdant_1box_r50_1x/inference/004799.jpg \
+  --input datasets/voc23_verdant_1box/images/train/008051.jpg \
+  --output output/boxinst_voc23_verdant_1box_r50_1x/inference/008051.jpg \
   --confidence-threshold 0.3 \
   --opts MODEL.WEIGHTS output/boxinst_voc23_verdant_1box_r50_1x/model_0004999.pth
 ```
