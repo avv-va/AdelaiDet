@@ -1,0 +1,19 @@
+_BASE_: "Base-BoxInst.yaml"
+MODEL:
+  WEIGHTS: "detectron2://ImageNetPretrained/MSRA/R-50.pkl"
+  RESNETS:
+    DEPTH: 50
+  FCOS:
+    NUM_CLASSES: 2          # bird, boat (default is 80 for COCO)
+DATASETS:
+  TRAIN: ("voc23_verdant_1box_train",)
+  TEST: ("voc23_verdant_1box_val",)
+SOLVER:
+  IMS_PER_BATCH: 16
+  BASE_LR: 0.01
+  MAX_ITER: 6500
+  STEPS: (44800, 57600)
+  CHECKPOINT_PERIOD: 500
+TEST:
+  EVAL_PERIOD: 1000
+OUTPUT_DIR: "output/voc23verdant1box_no_pairwise_loss"

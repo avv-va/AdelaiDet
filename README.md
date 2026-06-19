@@ -3,16 +3,16 @@
 2. `wget -P pretrained_models https://github.com/hustvl/BoxTeacher/releases/download/v1.0/R-50.pkl`
 3. `docker/adet.sh build`
 4. `docker/adet.sh run`
-5. `python tools/train_net.py --config-file configs/BoxInst/phenobench_R_50_1x.yaml --num-gpus 8`
+5. `python tools/train_net.py --config-file configs/BoxInst/voc23verdant1box_no_pairwise_loss.yaml --num-gpus 8`
 
-## Inference
+## Inference 
 ```
 python demo/demo.py \
-  --config-file output/boxinst_phenobench_r50_1x/config.yaml \
-  --input datasets/phenobench/images/val/06-05_00071_P0037822.png \
-  --output output/boxinst_phenobench_r50_1x/inference/06-05_00071_P0037822.png \
+  --config-file output/boxinst_voc23_verdant_1box_r50_1x/config.yaml \
+  --input datasets/voc23_verdant_1box/images/train/008051.jpg \
+  --output output/boxinst_voc23_verdant_1box_r50_1x/inference/008051.jpg \
   --confidence-threshold 0.3 \
-  --opts MODEL.WEIGHTS output/boxinst_phenobench_r50_1x/model_0009999.pth
+  --opts MODEL.WEIGHTS output/boxinst_voc23_verdant_1box_r50_1x/model_0004999.pth
 ```
 ## Logs
 `tensorboard --logdir output/boxinst_phenobench_r50_1x/`
