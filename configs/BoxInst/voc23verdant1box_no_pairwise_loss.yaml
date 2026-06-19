@@ -16,4 +16,4 @@ SOLVER:
   CHECKPOINT_PERIOD: 500
 TEST:
   EVAL_PERIOD: 500
-OUTPUT_DIR: "output/boxinst_voc23_verdant_1box_r50_1x"
+OUTPUT_DIR: "output/voc23verdant1box_no_pairwise_loss"
