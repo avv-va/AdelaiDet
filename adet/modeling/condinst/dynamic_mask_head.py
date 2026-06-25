@@ -222,22 +222,17 @@ class DynamicMaskHead(nn.Module):
 
                 if self.boxinst_enabled:
                     # box-supervised BoxInst losses
+                    image_color_similarity = torch.cat([x.image_color_similarity for x in gt_instances])
+                    image_color_similarity = image_color_similarity[gt_inds].to(dtype=mask_feats.dtype)
+
                     loss_prj_term = compute_project_term(mask_scores, gt_bitmasks)
 
                     pairwise_losses = compute_pairwise_term(
                         mask_logits, self.pairwise_size,
                         self.pairwise_dilation
                     )
-
-                    # only enforce the same-probability constraint on edges whose both
-                    # endpoints lie inside the gt box, so affinity is never propagated
-                    # across the box boundary (see BoxInstModel in ultralytics2)
-                    from adet.modeling.condinst.condinst import unfold_wo_center
-                    neighbor_in_box = unfold_wo_center(
-                        gt_bitmasks, kernel_size=self.pairwise_size,
-                        dilation=self.pairwise_dilation
-                    )[:, 0]
-                    weights = gt_bitmasks.float() * neighbor_in_box
+                    
+                    weights = (image_color_similarity >= self.pairwise_color_thresh).float() * gt_bitmasks.float()
                     loss_pairwise = (pairwise_losses * weights).sum() / weights.sum().clamp(min=1.0)
 
                     warmup_factor = min(self._iter.item() / float(self._warmup_iters), 1.0)
