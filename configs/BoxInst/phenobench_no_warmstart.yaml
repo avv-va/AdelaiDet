@@ -1,0 +1,22 @@
+_BASE_: "Base-BoxInst.yaml"
+MODEL:
+  WEIGHTS: "detectron2://ImageNetPretrained/MSRA/R-50.pkl"
+  RESNETS:
+    DEPTH: 50
+  FCOS:
+    NUM_CLASSES: 2          # crop, weed (default is 80 for COCO)
+  BOXINST:
+    PAIRWISE:
+      WARMUP_ITERS: 1       # disable pairwise loss warm start (default 10000)
+DATASETS:
+  TRAIN: ("phenobench_train",)
+  TEST: ("phenobench_val",)
+SOLVER:
+  IMS_PER_BATCH: 128
+  BASE_LR: 0.01
+  MAX_ITER: 44000
+  STEPS: (14000, 18000)
+  CHECKPOINT_PERIOD: 6000
+TEST:
+  EVAL_PERIOD: 6000
+OUTPUT_DIR: "output/phenobench_no_warmstart"
