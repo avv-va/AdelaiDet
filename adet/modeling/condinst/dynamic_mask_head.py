@@ -17,6 +17,25 @@ def compute_project_term(mask_scores, gt_bitmasks):
     return (mask_losses_x + mask_losses_y).mean()
 
 
+def compute_max_labeling(mask_logits, gt_bitmasks):
+    # batch_size = gt_bitmasks.shape[0]
+    cls_mask = (gt_bitmasks > 0).float()
+    foreground = mask_logits.detach().sigmoid() * cls_mask
+    col_max = foreground.amax(dim=2, keepdim=True)
+    row_max = foreground.amax(dim=3, keepdim=True)
+
+    normalizer = torch.minimum(col_max, row_max) * cls_mask
+    positives = (foreground > (0.95 * normalizer)).float() * cls_mask
+    col_box_height = cls_mask.sum(dim=2, keepdim=True)
+    col_pos_count = positives.sum(dim=2, keepdim=True)
+    pos_weights = positives * (col_box_height / col_pos_count.clamp(min=1.0))
+
+    weights = torch.maximum(pos_weights, 1.0 - cls_mask)
+    loss = F.binary_cross_entropy_with_logits(mask_logits, cls_mask, reduction="none") * weights
+    loss = loss.mean()
+    return loss
+
+
 def compute_pairwise_term(mask_logits, pairwise_size, pairwise_dilation):
     assert mask_logits.dim() == 4
 
@@ -225,12 +244,14 @@ class DynamicMaskHead(nn.Module):
                     image_color_similarity = torch.cat([x.image_color_similarity for x in gt_instances])
                     image_color_similarity = image_color_similarity[gt_inds].to(dtype=mask_feats.dtype)
 
-                    loss_prj_term = compute_project_term(mask_scores, gt_bitmasks)
+                    # loss_prj_term = compute_project_term(mask_scores, gt_bitmasks)
+                    loss_prj_term = compute_max_labeling(mask_logits, gt_bitmasks)
 
                     pairwise_losses = compute_pairwise_term(
                         mask_logits, self.pairwise_size,
                         self.pairwise_dilation
                     )
+
                     weights = (image_color_similarity >= self.pairwise_color_thresh).float() * gt_bitmasks.float()
                     loss_pairwise = (pairwise_losses * weights).sum() / weights.sum().clamp(min=1.0)
 
