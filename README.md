@@ -8,11 +8,11 @@
 ## Inference 
 ```
 python demo/demo.py \
-  --config-file output/boxinst_voc23_verdant_1box_r50_1x/config.yaml \
-  --input datasets/voc23_verdant_1box/images/train/008051.jpg \
-  --output output/boxinst_voc23_verdant_1box_r50_1x/inference/008051.jpg \
-  --confidence-threshold 0.3 \
-  --opts MODEL.WEIGHTS output/boxinst_voc23_verdant_1box_r50_1x/model_0004999.pth
+  --config-file output/phenobench_no_warmstart/config.yaml \
+  --input datasets/phenobench/images/val/06-05_00071_P0037822.png \
+  --output output/phenobench_no_warmstart/inference/06-05_00071_P0037822.png \
+  --confidence-threshold 0.01 \
+  --opts MODEL.WEIGHTS output/phenobench_no_warmstart/model_0035999.pth
 ```
 ## Logs
 `tensorboard --logdir output/boxinst_phenobench_r50_1x/`

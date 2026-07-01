@@ -9,8 +9,7 @@ DATASETS:
   TRAIN: ("phenobench_train",)
   TEST: ("phenobench_val",)
 SOLVER:
-  # 1407 train imgs / IMS_PER_BATCH 16 ~= 88 iters/epoch. 20000 iters ~= 227
-  # epochs.
+  # 1407 train imgs / IMS_PER_BATCH 16 ~= 88 iters/epoch. 20000 iters ~= 227 epochs.
   IMS_PER_BATCH: 16
   BASE_LR: 0.01
   MAX_ITER: 20000

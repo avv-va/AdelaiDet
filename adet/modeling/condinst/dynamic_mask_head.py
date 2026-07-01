@@ -231,12 +231,10 @@ class DynamicMaskHead(nn.Module):
                         mask_logits, self.pairwise_size,
                         self.pairwise_dilation
                     )
-                    
                     weights = (image_color_similarity >= self.pairwise_color_thresh).float() * gt_bitmasks.float()
                     loss_pairwise = (pairwise_losses * weights).sum() / weights.sum().clamp(min=1.0)
 
-                    # warmup_factor = min(self._iter.item() / float(self._warmup_iters), 1.0)
-                    warmup_factor = 1
+                    warmup_factor = min(self._iter.item() / float(self._warmup_iters), 1.0)
                     loss_pairwise = loss_pairwise * warmup_factor
 
                     losses.update({
