@@ -248,8 +248,8 @@ class DynamicMaskHead(nn.Module):
                     image_color_similarity = torch.cat([x.image_color_similarity for x in gt_instances])
                     image_color_similarity = image_color_similarity[gt_inds].to(dtype=mask_feats.dtype)
 
-                    # loss_prj_term = compute_project_term(mask_scores, gt_bitmasks)
-                    loss_prj_term = compute_max_labeling(mask_logits, gt_bitmasks)
+                    loss_prj_term = compute_project_term(mask_scores, gt_bitmasks)
+                    # loss_prj_term = compute_max_labeling(mask_logits, gt_bitmasks)
 
                     pairwise_losses = compute_pairwise_term(
                         mask_logits, self.pairwise_size,
