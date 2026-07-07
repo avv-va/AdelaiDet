@@ -39,6 +39,51 @@ metadata_text = {
     "thing_classes": ["text"]
 }
 
+# Box-supervised custom datasets (phenobench, VOC_23_verdant). Boxes come from
+# YOLO labels converted to COCO by tools/convert_phenobench_to_coco.py; BoxInst /
+# CondInst derive masks from the boxes. `stuff_classes`/`stuff_colors` mirror the
+# thing classes so the CondInstSemantic dense (num_classes, H, W) output can be
+# rendered by demo.py's Visualizer.draw_sem_seg (registration is lazy, so a
+# missing json only matters when the dataset is actually loaded, not at demo time).
+_PREDEFINED_SPLITS_BOX_SUPERVISED = {
+    "phenobench_train": ("phenobench/images/train", "phenobench/annotations/train.json"),
+    "phenobench_val": ("phenobench/images/val", "phenobench/annotations/val.json"),
+    "voc23_verdant_train": ("voc23_verdant/images/train", "voc23_verdant/annotations/train.json"),
+    "voc23_verdant_val": ("voc23_verdant/images/val", "voc23_verdant/annotations/val.json"),
+    "voc23_verdant_test": ("voc23_verdant/images/test", "voc23_verdant/annotations/test.json"),
+    "voc23_verdant_1box_train": ("voc23_verdant_1box/images/train", "voc23_verdant_1box/annotations/train.json"),
+    "voc23_verdant_1box_val": ("voc23_verdant_1box/images/val", "voc23_verdant_1box/annotations/val.json"),
+    "voc23_verdant_1box_test": ("voc23_verdant_1box/images/test", "voc23_verdant_1box/annotations/test.json"),
+}
+
+# One metadata dict per dataset family, keyed by name prefix.
+_BOX_SUPERVISED_METADATA = {
+    "phenobench": {
+        "thing_classes": ["crop", "weed"],
+        "stuff_classes": ["crop", "weed"],
+        "stuff_colors": [[0, 200, 0], [255, 60, 60]],
+    },
+    "voc23_verdant": {
+        "thing_classes": ["bird", "boat"],
+        "stuff_classes": ["bird", "boat"],
+        "stuff_colors": [[0, 130, 255], [255, 150, 0]],
+    },
+    "voc23_verdant_1box": {
+        "thing_classes": ["bird", "boat"],
+        "stuff_classes": ["bird", "boat"],
+        "stuff_colors": [[0, 130, 255], [255, 150, 0]],
+    },
+}
+
+
+def _metadata_for(name):
+    # Longest matching prefix wins (voc23_verdant_1box before voc23_verdant).
+    prefix = max(
+        (p for p in _BOX_SUPERVISED_METADATA if name.startswith(p)),
+        key=len,
+    )
+    return _BOX_SUPERVISED_METADATA[prefix]
+
 
 def register_all_coco(root="datasets"):
     for key, (image_root, json_file) in _PREDEFINED_SPLITS_PIC.items():
@@ -54,6 +99,13 @@ def register_all_coco(root="datasets"):
         register_text_instances(
             key,
             metadata_text,
+            os.path.join(root, json_file) if "://" not in json_file else json_file,
+            os.path.join(root, image_root),
+        )
+    for key, (image_root, json_file) in _PREDEFINED_SPLITS_BOX_SUPERVISED.items():
+        register_coco_instances(
+            key,
+            _metadata_for(key),
             os.path.join(root, json_file) if "://" not in json_file else json_file,
             os.path.join(root, image_root),
         )

@@ -12,6 +12,7 @@ from detectron2.utils.logger import setup_logger
 
 from predictor import VisualizationDemo
 from adet.config import get_cfg
+import adet.data  # noqa: F401  registers custom datasets (phenobench, voc23) + their metadata
 
 # constants
 WINDOW_NAME = "COCO detections"
@@ -72,7 +73,7 @@ if __name__ == "__main__":
 
     cfg = setup_cfg(args)
 
-    demo = VisualizationDemo(cfg)
+    demo = VisualizationDemo(cfg, confidence_threshold=args.confidence_threshold)
 
     if args.input:
         if os.path.isdir(args.input[0]):
@@ -85,11 +86,14 @@ if __name__ == "__main__":
             img = read_image(path, format="BGR")
             start_time = time.time()
             predictions, visualized_output = demo.run_on_image(img)
-            logger.info(
-                "{}: detected {} instances in {:.2f}s".format(
-                    path, len(predictions["instances"]), time.time() - start_time
+            if "instances" in predictions:
+                logger.info(
+                    "{}: detected {} instances in {:.2f}s".format(
+                        path, len(predictions["instances"]), time.time() - start_time
+                    )
                 )
-            )
+            else:
+                logger.info("{}: {:.2f}s".format(path, time.time() - start_time))
 
             if args.output:
                 if os.path.isdir(args.output):
