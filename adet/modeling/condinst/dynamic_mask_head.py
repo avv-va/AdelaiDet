@@ -110,6 +110,27 @@ def build_dynamic_mask_head(cfg):
     return DynamicMaskHead(cfg)
 
 
+def mask_heads_forward(features, weights, biases, num_insts):
+    '''
+    :param features
+    :param weights: [w0, w1, ...]
+    :param bias: [b0, b1, ...]
+    :return:
+    '''
+    assert features.dim() == 4
+    n_layers = len(weights)
+    x = features
+    for i, (w, b) in enumerate(zip(weights, biases)):
+        x = F.conv2d(
+            x, w, bias=b,
+            stride=1, padding=0,
+            groups=num_insts
+        )
+        if i < n_layers - 1:
+            x = F.relu(x)
+    return x
+
+
 class DynamicMaskHead(nn.Module):
     def __init__(self, cfg):
         super(DynamicMaskHead, self).__init__()
@@ -152,24 +173,7 @@ class DynamicMaskHead(nn.Module):
         self.register_buffer("_iter", torch.zeros([1]))
 
     def mask_heads_forward(self, features, weights, biases, num_insts):
-        '''
-        :param features
-        :param weights: [w0, w1, ...]
-        :param bias: [b0, b1, ...]
-        :return:
-        '''
-        assert features.dim() == 4
-        n_layers = len(weights)
-        x = features
-        for i, (w, b) in enumerate(zip(weights, biases)):
-            x = F.conv2d(
-                x, w, bias=b,
-                stride=1, padding=0,
-                groups=num_insts
-            )
-            if i < n_layers - 1:
-                x = F.relu(x)
-        return x
+        return mask_heads_forward(features, weights, biases, num_insts)
 
     def mask_heads_forward_with_coords(
             self, mask_feats, mask_feat_stride, instances
