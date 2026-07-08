@@ -35,7 +35,9 @@ case "$cmd" in
 			"$ROOT/datasets/voc23_verdant/annotations" \
 			"$ROOT/datasets/voc23_verdant/images" \
 			"$ROOT/datasets/voc23_verdant_1box/annotations" \
-			"$ROOT/datasets/voc23_verdant_1box/images"
+			"$ROOT/datasets/voc23_verdant_1box/images" \
+			"$ROOT/datasets/voc2_verdant_1img/annotations" \
+			"$ROOT/datasets/voc2_verdant_1img/images"
 		# Source of the phenobench images (read from outside the repo). Override
 		# with PHENOBENCH_IMAGES=... if the dataset lives elsewhere.
 		PHENOBENCH_IMAGES="${PHENOBENCH_IMAGES:-/home/ava/data/phenobench-yolo/images}"
@@ -43,6 +45,8 @@ case "$cmd" in
 		VOC23_VERDANT_IMAGES="${VOC23_VERDANT_IMAGES:-/home/ava/data/VOC_23_verdant/images}"
 		# Same for VOC_23_verdant_1box. Override with VOC23_VERDANT_1BOX_IMAGES=... .
 		VOC23_VERDANT_1BOX_IMAGES="${VOC23_VERDANT_1BOX_IMAGES:-/home/ava/data/VOC_23_verdant_1box/images}"
+		# Same for VOC_2_verdant_1img. Override with VOC2_VERDANT_1IMG_IMAGES=... .
+		VOC2_VERDANT_1IMG_IMAGES="${VOC2_VERDANT_1IMG_IMAGES:-/home/ava/data/VOC_2_verdant_1img/images}"
 		# tools/ and configs/ are bind-mounted so edits to the (pure-python)
 		# training script and config files take effect live, with no rebuild.
 		# adet/ stays baked into the image (it holds the compiled adet._C.so).
@@ -58,6 +62,7 @@ case "$cmd" in
 			-v "$PHENOBENCH_IMAGES:/home/appuser/AdelaiDet/datasets/phenobench/images:ro" \
 			-v "$VOC23_VERDANT_IMAGES:/home/appuser/AdelaiDet/datasets/voc23_verdant/images:ro" \
 			-v "$VOC23_VERDANT_1BOX_IMAGES:/home/appuser/AdelaiDet/datasets/voc23_verdant_1box/images:ro" \
+			-v "$VOC2_VERDANT_1IMG_IMAGES:/home/appuser/AdelaiDet/datasets/voc2_verdant_1img/images:ro" \
 			"$IMAGE" \
 			"${@:-/bin/bash}"
 		;;

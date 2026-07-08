@@ -54,6 +54,9 @@ _PREDEFINED_SPLITS_BOX_SUPERVISED = {
     "voc23_verdant_1box_train": ("voc23_verdant_1box/images/train", "voc23_verdant_1box/annotations/train.json"),
     "voc23_verdant_1box_val": ("voc23_verdant_1box/images/val", "voc23_verdant_1box/annotations/val.json"),
     "voc23_verdant_1box_test": ("voc23_verdant_1box/images/test", "voc23_verdant_1box/annotations/test.json"),
+    "voc2_verdant_1img_train": ("voc2_verdant_1img/images/train", "voc2_verdant_1img/annotations/train.json"),
+    "voc2_verdant_1img_val": ("voc2_verdant_1img/images/val", "voc2_verdant_1img/annotations/val.json"),
+    "voc2_verdant_1img_test": ("voc2_verdant_1img/images/test", "voc2_verdant_1img/annotations/test.json"),
 }
 
 # One metadata dict per dataset family, keyed by name prefix.
@@ -69,6 +72,11 @@ _BOX_SUPERVISED_METADATA = {
         "stuff_colors": [[0, 130, 255], [255, 150, 0]],
     },
     "voc23_verdant_1box": {
+        "thing_classes": ["bird", "boat"],
+        "stuff_classes": ["bird", "boat"],
+        "stuff_colors": [[0, 130, 255], [255, 150, 0]],
+    },
+    "voc2_verdant_1img": {
         "thing_classes": ["bird", "boat"],
         "stuff_classes": ["bird", "boat"],
         "stuff_colors": [[0, 130, 255], [255, 150, 0]],
