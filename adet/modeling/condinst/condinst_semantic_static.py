@@ -1,7 +1,7 @@
 from detectron2.modeling.meta_arch.build import META_ARCH_REGISTRY
 
 from .condinst_semantic import CondInstSemantic
-from .semantic_seg_head import build_semantic_seg_head
+from .semantic_static_head import build_semantic_seg_head
 from .semantic_aggregation import union_bitmasks_by_class
 
 __all__ = ["BoxInstSemanticStatic"]
