@@ -1,10 +1,9 @@
-## How to train BoxInst on PhenoBench: 
-1. `python tools/convert_phenobench_to_coco.py --yolo-root <phenobench-yolo-bbox-path> --out-dir datasets/phenobench/annotations`
-2. `wget -P pretrained_models https://github.com/hustvl/BoxTeacher/releases/download/v1.0/R-50.pkl`
-3. `docker/adet.sh build`
-4. `docker/adet.sh run`
-5. `python tools/train_net.py --config-file configs/BoxInst/voc23verdant1box_no_pairwise_loss.yaml --num-gpus 8`
-
+### Train
+```
+docker/adet.sh build
+docker/adet.sh run /path/to/dataset/dir
+python tools/train_net.py --config-file /path/to/config.yaml --num-gpus 8
+```
 ## Inference 
 ```
 python demo/demo.py \

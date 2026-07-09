@@ -4,7 +4,7 @@ MODEL:
   RESNETS:
     DEPTH: 50
   FCOS:
-    NUM_CLASSES: 2          # crop, weed (default is 80 for COCO)
+    NUM_CLASSES: 2
   BOXINST:
     PAIRWISE:
       WARMUP_ITERS: 1       # disable pairwise loss warm start (default 10000)

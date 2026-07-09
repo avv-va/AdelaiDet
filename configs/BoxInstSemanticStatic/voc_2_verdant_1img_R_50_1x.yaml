@@ -4,7 +4,7 @@ MODEL:
   RESNETS:
     DEPTH: 50
   FCOS:
-    NUM_CLASSES: 2          # bird, boat (default is 80 for COCO)
+    NUM_CLASSES: 2
 DATASETS:
   TRAIN: ("voc2_verdant_1img_train",)
   TEST: ("voc2_verdant_1img_val",)
