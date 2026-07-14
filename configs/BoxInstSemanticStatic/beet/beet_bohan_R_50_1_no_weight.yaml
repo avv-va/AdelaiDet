@@ -12,6 +12,7 @@ SOLVER:
   BASE_LR: 0.01
   MAX_ITER: 20000
   STEPS: (14000, 18000)
+  CHECKPOINT_PERIOD: 500
 TEST:
   EVAL_PERIOD: 2000
 OUTPUT_DIR: "output/boxinst_semantic_static_beet_bohan_r50_1x_no_weight"

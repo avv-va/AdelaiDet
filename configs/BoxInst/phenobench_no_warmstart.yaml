@@ -9,8 +9,8 @@ MODEL:
     PAIRWISE:
       WARMUP_ITERS: 1       # disable pairwise loss warm start (default 10000)
 DATASETS:
-  TRAIN: ("phenobench_train",)
-  TEST: ("phenobench_val",)
+  TRAIN: ("phenobench-yolo_train",)
+  TEST: ("phenobench-yolo_val",)
 SOLVER:
   IMS_PER_BATCH: 128
   BASE_LR: 0.01

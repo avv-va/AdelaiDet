@@ -6,8 +6,8 @@ MODEL:
   FCOS:
     NUM_CLASSES: 2
 DATASETS:
-  TRAIN: ("phenobench_train",)
-  TEST: ("phenobench_val",)
+  TRAIN: ("phenobench-yolo_train",)
+  TEST: ("phenobench-yolo_val",)
 SOLVER:
   # 1407 train imgs / IMS_PER_BATCH 16 ~= 88 iters/epoch. 20000 iters ~= 227 epochs.
   IMS_PER_BATCH: 16
