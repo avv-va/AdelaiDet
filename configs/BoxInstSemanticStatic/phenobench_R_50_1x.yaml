@@ -1,4 +1,4 @@
-_BASE_: "Base-BoxInst.yaml"
+_BASE_: "Base-BoxInstSemanticStatic.yaml"
 MODEL:
   WEIGHTS: "detectron2://ImageNetPretrained/MSRA/R-50.pkl"
   RESNETS:
@@ -16,4 +16,4 @@ SOLVER:
   STEPS: (14000, 18000)
 TEST:
   EVAL_PERIOD: 2000
-OUTPUT_DIR: "output/boxinst_phenobench_r50_1x"
+OUTPUT_DIR: "output/boxinst_semantic_static_phenobench_r50_1x"

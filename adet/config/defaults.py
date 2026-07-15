@@ -262,6 +262,39 @@ _C.MODEL.BOXINST.PAIRWISE.WARMUP_ITERS = 10000
 _C.MODEL.BOXINST.PAIRWISE.COLOR_THRESH = 0.3
 
 # ---------------------------------------------------------------------------- #
+# CondInst-Semantic Options (per-class dynamic mask head, see CondInstSemantic)
+# ---------------------------------------------------------------------------- #
+_C.MODEL.CONDINST_SEM = CN()
+
+# How positive FCOS locations are pooled into one controller vector per
+# (image, class) slot at train time:
+#   "per_instance": two-stage mean (locations -> instance, instance -> class).
+#                   Gives every GT instance equal weight regardless of how
+#                   many FCOS locations matched it (recommended default).
+#   "per_location": one-stage mean over all matched locations directly.
+#                   Simpler, but implicitly up-weights instances/levels that
+#                   produce more matched locations (e.g. larger boxes).
+_C.MODEL.CONDINST_SEM.AGGREGATION = "per_instance"
+
+# Geometric conditioning feature fed to the dynamic conv in place of the
+# original per-instance relative coords:
+#   "offset": 2-channel (dx, dy) from each pixel to the nearest same-class
+#             instance location (recommended default).
+#   "scalar": 1-channel Euclidean distance to the nearest same-class location.
+_C.MODEL.CONDINST_SEM.DISTANCE_MODE = "offset"
+
+# Fill value (pre-normalization, in mask-feature pixel units) used for the
+# distance/offset feature of any (image, class) slot with zero instances of
+# that class in that image. Large on purpose: a 0 offset would tell the
+# dynamic conv "this pixel is a class-c center" everywhere absent that class.
+_C.MODEL.CONDINST_SEM.EMPTY_SLOT_DISTANCE_FILL = 10000.0
+
+# Std used to initialize the learnable per-class fallback controller
+# embedding (used for classes with zero matched/detected instances in an
+# image, and added to every slot's pooled controller vector).
+_C.MODEL.CONDINST_SEM.PRIOR_EMBEDDING_INIT_STD = 0.01
+
+# ---------------------------------------------------------------------------- #
 # TOP Module Options
 # ---------------------------------------------------------------------------- #
 _C.MODEL.TOP_MODULE = CN()

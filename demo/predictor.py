@@ -17,13 +17,16 @@ from adet.utils.visualizer import TextVisualizer
 
 
 class VisualizationDemo(object):
-    def __init__(self, cfg, instance_mode=ColorMode.IMAGE, parallel=False):
+    def __init__(self, cfg, instance_mode=ColorMode.IMAGE, parallel=False, confidence_threshold=0.5):
         """
         Args:
             cfg (CfgNode):
             instance_mode (ColorMode):
             parallel (bool): whether to run the model in different processes from visualization.
                 Useful since the visualization logic can be slow.
+            confidence_threshold (float): for semantic-segmentation models, the minimum
+                per-class probability for a pixel to be assigned a class; pixels below it
+                are left as background (original image shown through).
         """
         self.metadata = MetadataCatalog.get(
             cfg.DATASETS.TEST[0] if len(cfg.DATASETS.TEST) else "__unused"
@@ -31,6 +34,7 @@ class VisualizationDemo(object):
         self.cfg = cfg
         self.cpu_device = torch.device("cpu")
         self.instance_mode = instance_mode
+        self.confidence_threshold = confidence_threshold
         self.vis_text = cfg.MODEL.ROI_HEADS.NAME == "TextHead"
 
         self.parallel = parallel
@@ -69,12 +73,29 @@ class VisualizationDemo(object):
         else:
             if "sem_seg" in predictions:
                 vis_output = visualizer.draw_sem_seg(
-                    predictions["sem_seg"].argmax(dim=0).to(self.cpu_device))
+                    self._sem_seg_to_labels(predictions["sem_seg"]))
             if "instances" in predictions:
                 instances = predictions["instances"].to(self.cpu_device)
                 vis_output = visualizer.draw_instance_predictions(predictions=instances)
 
         return predictions, vis_output
+
+    def _sem_seg_to_labels(self, sem_seg):
+        """
+        Turn a CondInstSemantic dense output into a (H, W) integer label map for
+        Visualizer.draw_sem_seg.
+
+        `sem_seg` is (num_classes, H, W) of independent sigmoid probabilities (not a
+        softmax partition). Each pixel takes the arg-max class, but pixels whose best
+        probability is below `confidence_threshold` are set to `num_classes` -- an
+        out-of-range label that draw_sem_seg skips, so the original image shows through
+        as background.
+        """
+        sem_seg = sem_seg.to(self.cpu_device)
+        num_classes = sem_seg.shape[0]
+        probs, labels = sem_seg.max(dim=0)
+        labels[probs < self.confidence_threshold] = num_classes
+        return labels
 
     def _frame_from_video(self, video):
         while video.isOpened():
@@ -126,7 +147,7 @@ class VisualizationDemo(object):
                 vis_frame = video_visualizer.draw_instance_predictions(frame, predictions)
             elif "sem_seg" in predictions:
                 vis_frame = video_visualizer.draw_sem_seg(
-                    frame, predictions["sem_seg"].argmax(dim=0).to(self.cpu_device)
+                    frame, self._sem_seg_to_labels(predictions["sem_seg"])
                 )
 
             # Converts Matplotlib RGB format to OpenCV BGR format

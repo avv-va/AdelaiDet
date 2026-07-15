@@ -22,8 +22,7 @@ import torch
 from torch.nn.parallel import DistributedDataParallel
 
 import detectron2.utils.comm as comm
-from detectron2.data import DatasetCatalog, MetadataCatalog, build_detection_train_loader
-from detectron2.data.datasets import register_coco_instances
+from detectron2.data import MetadataCatalog, build_detection_train_loader
 from detectron2.engine import DefaultTrainer, default_argument_parser, default_setup, hooks, launch
 from detectron2.utils.events import EventStorage
 from detectron2.evaluation import (
@@ -42,68 +41,6 @@ from adet.data.dataset_mapper import DatasetMapperWithBasis
 from adet.data.fcpose_dataset_mapper import FCPoseDatasetMapper
 from adet.config import get_cfg
 from adet.checkpoint import AdetCheckpointer
-
-# --- custom datasets -------------------------------------------------------
-# phenobench (box-supervised): boxes from phenobench-yolo, converted to COCO by
-# tools/convert_phenobench_to_coco.py. Paths are relative to the working dir
-# (the repo root). BoxInst (configs/BoxInst/*phenobench*) derives masks from
-# the boxes, so only bounding-box annotations are needed.
-_PHENOBENCH = {
-    "phenobench_train": (
-        "datasets/phenobench/images/train",
-        "datasets/phenobench/annotations/train.json",
-    ),
-    "phenobench_val": (
-        "datasets/phenobench/images/val",
-        "datasets/phenobench/annotations/val.json",
-    ),
-}
-for _name, (_img_root, _json) in _PHENOBENCH.items():
-    if _name not in DatasetCatalog.list():
-        register_coco_instances(_name, {"thing_classes": ["crop", "weed"]}, _json, _img_root)
-
-# VOC_23_verdant (box-supervised): same pipeline as phenobench. YOLO-pose labels
-# from /home/ava/data/VOC_23_verdant converted to COCO by
-# tools/convert_phenobench_to_coco.py; BoxInst derives masks from the boxes.
-_VOC23_VERDANT = {
-    "voc23_verdant_train": (
-        "datasets/voc23_verdant/images/train",
-        "datasets/voc23_verdant/annotations/train.json",
-    ),
-    "voc23_verdant_val": (
-        "datasets/voc23_verdant/images/val",
-        "datasets/voc23_verdant/annotations/val.json",
-    ),
-    "voc23_verdant_test": (
-        "datasets/voc23_verdant/images/test",
-        "datasets/voc23_verdant/annotations/test.json",
-    ),
-}
-for _name, (_img_root, _json) in _VOC23_VERDANT.items():
-    if _name not in DatasetCatalog.list():
-        register_coco_instances(_name, {"thing_classes": ["bird", "boat"]}, _json, _img_root)
-
-# VOC_23_verdant_1box (box-supervised): same pipeline as voc23_verdant, but the
-# YOLO-pose labels from /home/ava/data/VOC_23_verdant_1box carry a single box per
-# image. Converted to COCO by tools/convert_phenobench_to_coco.py; BoxInst
-# derives masks from the boxes.
-_VOC23_VERDANT_1BOX = {
-    "voc23_verdant_1box_train": (
-        "datasets/voc23_verdant_1box/images/train",
-        "datasets/voc23_verdant_1box/annotations/train.json",
-    ),
-    "voc23_verdant_1box_val": (
-        "datasets/voc23_verdant_1box/images/val",
-        "datasets/voc23_verdant_1box/annotations/val.json",
-    ),
-    "voc23_verdant_1box_test": (
-        "datasets/voc23_verdant_1box/images/test",
-        "datasets/voc23_verdant_1box/annotations/test.json",
-    ),
-}
-for _name, (_img_root, _json) in _VOC23_VERDANT_1BOX.items():
-    if _name not in DatasetCatalog.list():
-        register_coco_instances(_name, {"thing_classes": ["bird", "boat"]}, _json, _img_root)
 
 
 class Trainer(DefaultTrainer):

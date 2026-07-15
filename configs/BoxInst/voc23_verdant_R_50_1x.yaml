@@ -4,10 +4,10 @@ MODEL:
   RESNETS:
     DEPTH: 50
   FCOS:
-    NUM_CLASSES: 2          # bird, boat (default is 80 for COCO)
+    NUM_CLASSES: 2
 DATASETS:
-  TRAIN: ("voc23_verdant_train",)
-  TEST: ("voc23_verdant_val",)
+  TRAIN: ("VOC_23_verdant_train",)
+  TEST: ("VOC_23_verdant_val",)
 SOLVER:
   # 260 train imgs / IMS_PER_BATCH 16 ~= 16 iters/epoch. 64000 iters ~= 4000
   # epochs. Steps at 0.7/0.9 of MAX_ITER (same ratio as phenobench).

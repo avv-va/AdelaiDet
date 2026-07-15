@@ -1,4 +1,4 @@
-_BASE_: "Base-BoxInst.yaml"
+_BASE_: "../Base-BoxInstSemanticStatic.yaml"
 MODEL:
   WEIGHTS: "detectron2://ImageNetPretrained/MSRA/R-50.pkl"
   RESNETS:
@@ -6,14 +6,13 @@ MODEL:
   FCOS:
     NUM_CLASSES: 2
 DATASETS:
-  TRAIN: ("phenobench-yolo_train",)
-  TEST: ("phenobench-yolo_val",)
+  TRAIN: ("beet_bresko_train",)
+  TEST: ("beet_bresko_val",)
 SOLVER:
-  # 1407 train imgs / IMS_PER_BATCH 16 ~= 88 iters/epoch. 20000 iters ~= 227 epochs.
   IMS_PER_BATCH: 16
   BASE_LR: 0.01
   MAX_ITER: 20000
   STEPS: (14000, 18000)
 TEST:
   EVAL_PERIOD: 2000
-OUTPUT_DIR: "output/boxinst_phenobench_r50_1x"
+OUTPUT_DIR: "output/boxinst_semantic_static_beet_bresko_r50_1x"

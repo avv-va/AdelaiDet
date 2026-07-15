@@ -1,18 +1,17 @@
-## How to train BoxInst on PhenoBench: 
-1. `python tools/convert_phenobench_to_coco.py --yolo-root <phenobench-yolo-bbox-path> --out-dir datasets/phenobench/annotations`
-2. `wget -P pretrained_models https://github.com/hustvl/BoxTeacher/releases/download/v1.0/R-50.pkl`
-3. `docker/adet.sh build`
-4. `docker/adet.sh run`
-5. `python tools/train_net.py --config-file configs/BoxInst/voc23verdant1box_no_pairwise_loss.yaml --num-gpus 8`
-
+### Train
+```
+docker/adet.sh build
+docker/adet.sh run /path/to/dataset/dir
+python tools/train_net.py --config-file /path/to/config.yaml --num-gpus 8
+```
 ## Inference 
 ```
 python demo/demo.py \
-  --config-file output/boxinst_voc23_verdant_1box_r50_1x/config.yaml \
-  --input datasets/voc23_verdant_1box/images/train/008051.jpg \
-  --output output/boxinst_voc23_verdant_1box_r50_1x/inference/008051.jpg \
-  --confidence-threshold 0.3 \
-  --opts MODEL.WEIGHTS output/boxinst_voc23_verdant_1box_r50_1x/model_0004999.pth
+  --config-file output/phenobench_no_warmstart/config.yaml \
+  --input datasets/phenobench/images/val/06-05_00071_P0037822.png \
+  --output output/phenobench_no_warmstart/inference/06-05_00071_P0037822.png \
+  --confidence-threshold 0.01 \
+  --opts MODEL.WEIGHTS output/phenobench_no_warmstart/model_0035999.pth
 ```
 ## Logs
 `tensorboard --logdir output/boxinst_phenobench_r50_1x/`

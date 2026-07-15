@@ -1,0 +1,28 @@
+_BASE_: "../Base-BoxInstSemanticStatic.yaml"
+MODEL:
+  WEIGHTS: ""
+  # Detectron2's defaults assume ImageNet fine-tuning; training from scratch
+  # needs the backbone unfrozen, a trainable norm (FrozenBN is an identity op
+  # with random init), and real pixel stds (the [1,1,1] default is a Caffe
+  # pretrained-weights convention). Stds are BGR to match INPUT.FORMAT.
+  PIXEL_STD: [57.375, 57.12, 58.395]
+  BACKBONE:
+    FREEZE_AT: 0
+  RESNETS:
+    DEPTH: 50
+    NORM: "SyncBN"
+  FCOS:
+    NUM_CLASSES: 2
+DATASETS:
+  TRAIN: ("beet_bohan_train",)
+  TEST: ("beet_bohan_val",)
+SOLVER:
+  IMS_PER_BATCH: 16
+  BASE_LR: 0.01
+  MAX_ITER: 20000
+  STEPS: (14000, 18000)
+  CHECKPOINT_PERIOD: 500
+  WARMUP_ITERS: 2000
+TEST:
+  EVAL_PERIOD: 2000
+OUTPUT_DIR: "output/boxinst_semantic_static_beet_bohan_r50_1x_no_weight_fixed"

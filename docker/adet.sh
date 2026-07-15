@@ -1,14 +1,4 @@
 #!/usr/bin/env bash
-# Build and run the AdelaiDet Docker image (for training BoxInst on PhenoBench).
-#
-#   docker/adet.sh build          # build the image
-#   docker/adet.sh run            # drop into an interactive shell (default)
-#   docker/adet.sh run <cmd...>   # run a command in the container, e.g.:
-#       docker/adet.sh run python tools/train_net.py \
-#           --config-file configs/BoxInst/phenobench_R_50_1x.yaml --num-gpus 8
-#
-# The runtime flags below (GPU access, shm size, ulimits, dataset/weight/output
-# mounts) are the reason this script exists -- they cannot live in the Dockerfile.
 set -euo pipefail
 
 IMAGE="adet"
@@ -27,22 +17,20 @@ case "$cmd" in
 			"$ROOT"
 		;;
 	run)
-		# Create host dirs so the bind-mounts don't materialize as root-owned.
-		# (incl. the image mountpoints, nested inside datasets/.)
-		mkdir -p "$ROOT/datasets/phenobench/annotations" \
-			"$ROOT/pretrained_models" "$ROOT/output" \
-			"$ROOT/datasets/phenobench/images" \
-			"$ROOT/datasets/voc23_verdant/annotations" \
-			"$ROOT/datasets/voc23_verdant/images" \
-			"$ROOT/datasets/voc23_verdant_1box/annotations" \
-			"$ROOT/datasets/voc23_verdant_1box/images"
-		# Source of the phenobench images (read from outside the repo). Override
-		# with PHENOBENCH_IMAGES=... if the dataset lives elsewhere.
-		PHENOBENCH_IMAGES="${PHENOBENCH_IMAGES:-/home/ava/data/phenobench-yolo/images}"
-		# Same for VOC_23_verdant. Override with VOC23_VERDANT_IMAGES=... .
-		VOC23_VERDANT_IMAGES="${VOC23_VERDANT_IMAGES:-/home/ava/data/VOC_23_verdant/images}"
-		# Same for VOC_23_verdant_1box. Override with VOC23_VERDANT_1BOX_IMAGES=... .
-		VOC23_VERDANT_1BOX_IMAGES="${VOC23_VERDANT_1BOX_IMAGES:-/home/ava/data/VOC_23_verdant_1box/images}"
+		# Leading args that are existing directories are datasets to mount at
+		# datasets/<basename> (read-only). Everything after them is the command.
+		DATASET_MOUNTS=()
+		while [ $# -gt 0 ] && [ -d "$1" ]; do
+			ds_path="$(cd "$1" && pwd)"       # absolute, symlinks resolved
+			ds_name="$(basename "$ds_path")"
+			# Host mountpoint must exist first so the nested bind-mount (inside
+			# the datasets/ mount) is owned by the user, not root.
+			mkdir -p "$ROOT/datasets/$ds_name"
+			DATASET_MOUNTS+=(-v "$ds_path:/home/appuser/AdelaiDet/datasets/$ds_name:ro")
+			echo "mounting dataset '$ds_name' from $ds_path" >&2
+			shift
+		done
+		mkdir -p "$ROOT/pretrained_models" "$ROOT/output"
 		# tools/ and configs/ are bind-mounted so edits to the (pure-python)
 		# training script and config files take effect live, with no rebuild.
 		# adet/ stays baked into the image (it holds the compiled adet._C.so).
@@ -55,9 +43,7 @@ case "$cmd" in
 			-v "$ROOT/output:/home/appuser/AdelaiDet/output" \
 			-v "$ROOT/tools:/home/appuser/AdelaiDet/tools" \
 			-v "$ROOT/configs:/home/appuser/AdelaiDet/configs" \
-			-v "$PHENOBENCH_IMAGES:/home/appuser/AdelaiDet/datasets/phenobench/images:ro" \
-			-v "$VOC23_VERDANT_IMAGES:/home/appuser/AdelaiDet/datasets/voc23_verdant/images:ro" \
-			-v "$VOC23_VERDANT_1BOX_IMAGES:/home/appuser/AdelaiDet/datasets/voc23_verdant_1box/images:ro" \
+			${DATASET_MOUNTS[@]+"${DATASET_MOUNTS[@]}"} \
 			"$IMAGE" \
 			"${@:-/bin/bash}"
 		;;

@@ -17,6 +17,25 @@ def compute_project_term(mask_scores, gt_bitmasks):
     return (mask_losses_x + mask_losses_y).mean()
 
 
+def compute_max_labeling(mask_logits, gt_bitmasks):
+    # batch_size = gt_bitmasks.shape[0]
+    cls_mask = (gt_bitmasks > 0).float()
+    foreground = mask_logits.detach().sigmoid() * cls_mask
+    col_max = foreground.amax(dim=2, keepdim=True)
+    row_max = foreground.amax(dim=3, keepdim=True)
+
+    normalizer = torch.minimum(col_max, row_max) * cls_mask
+    positives = (foreground > (0.95 * normalizer)).float() * cls_mask
+    col_box_height = cls_mask.sum(dim=2, keepdim=True)
+    col_pos_count = positives.sum(dim=2, keepdim=True)
+    pos_weights = positives * (col_box_height / col_pos_count.clamp(min=1.0))
+
+    weights = torch.maximum(pos_weights, 1.0 - cls_mask)
+    loss = F.binary_cross_entropy_with_logits(mask_logits, cls_mask, reduction="none") * weights
+    loss = loss.mean()
+    return loss
+
+
 def compute_pairwise_term(mask_logits, pairwise_size, pairwise_dilation):
     assert mask_logits.dim() == 4
 
@@ -91,6 +110,27 @@ def build_dynamic_mask_head(cfg):
     return DynamicMaskHead(cfg)
 
 
+def mask_heads_forward(features, weights, biases, num_insts):
+    '''
+    :param features
+    :param weights: [w0, w1, ...]
+    :param bias: [b0, b1, ...]
+    :return:
+    '''
+    assert features.dim() == 4
+    n_layers = len(weights)
+    x = features
+    for i, (w, b) in enumerate(zip(weights, biases)):
+        x = F.conv2d(
+            x, w, bias=b,
+            stride=1, padding=0,
+            groups=num_insts
+        )
+        if i < n_layers - 1:
+            x = F.relu(x)
+    return x
+
+
 class DynamicMaskHead(nn.Module):
     def __init__(self, cfg):
         super(DynamicMaskHead, self).__init__()
@@ -133,24 +173,7 @@ class DynamicMaskHead(nn.Module):
         self.register_buffer("_iter", torch.zeros([1]))
 
     def mask_heads_forward(self, features, weights, biases, num_insts):
-        '''
-        :param features
-        :param weights: [w0, w1, ...]
-        :param bias: [b0, b1, ...]
-        :return:
-        '''
-        assert features.dim() == 4
-        n_layers = len(weights)
-        x = features
-        for i, (w, b) in enumerate(zip(weights, biases)):
-            x = F.conv2d(
-                x, w, bias=b,
-                stride=1, padding=0,
-                groups=num_insts
-            )
-            if i < n_layers - 1:
-                x = F.relu(x)
-        return x
+        return mask_heads_forward(features, weights, biases, num_insts)
 
     def mask_heads_forward_with_coords(
             self, mask_feats, mask_feat_stride, instances

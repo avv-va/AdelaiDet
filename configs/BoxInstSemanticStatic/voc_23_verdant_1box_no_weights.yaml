@@ -1,6 +1,5 @@
-_BASE_: "Base-BoxInst.yaml"
+_BASE_: "Base-BoxInstSemanticStatic.yaml"
 MODEL:
-  WEIGHTS: "detectron2://ImageNetPretrained/MSRA/R-50.pkl"
   RESNETS:
     DEPTH: 50
   FCOS:
@@ -11,9 +10,9 @@ DATASETS:
 SOLVER:
   IMS_PER_BATCH: 16
   BASE_LR: 0.01
-  MAX_ITER: 6500
+  MAX_ITER: 20000
   STEPS: (44800, 57600)
   CHECKPOINT_PERIOD: 500
 TEST:
-  EVAL_PERIOD: 1000
-OUTPUT_DIR: "output/voc23verdant1box_no_pairwise_loss"
+  EVAL_PERIOD: 500
+OUTPUT_DIR: "output/boxinst_semantic_static_voc_no_weights"

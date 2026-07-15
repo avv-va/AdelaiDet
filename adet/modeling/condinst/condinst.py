@@ -82,7 +82,7 @@ class CondInst(nn.Module):
 
         self.backbone = build_backbone(cfg)
         self.proposal_generator = build_proposal_generator(cfg, self.backbone.output_shape())
-        self.mask_head = build_dynamic_mask_head(cfg)
+        self.mask_head = self._build_mask_head(cfg)
         self.mask_branch = build_mask_branch(cfg, self.backbone.output_shape())
 
         self.mask_out_stride = cfg.MODEL.CONDINST.MASK_OUT_STRIDE
@@ -111,6 +111,9 @@ class CondInst(nn.Module):
         pixel_std = torch.Tensor(cfg.MODEL.PIXEL_STD).to(self.device).view(3, 1, 1)
         self.normalizer = lambda x: (x - pixel_mean) / pixel_std
         self.to(self.device)
+
+    def _build_mask_head(self, cfg):
+        return build_dynamic_mask_head(cfg)
 
     def forward(self, batched_inputs):
         original_images = [x["image"].to(self.device) for x in batched_inputs]
@@ -165,24 +168,26 @@ class CondInst(nn.Module):
             return losses
         else:
             pred_instances_w_masks = self._forward_mask_heads_test(proposals, mask_feats)
+            return self._postprocess_inference(pred_instances_w_masks, batched_inputs, images_norm)
 
-            padded_im_h, padded_im_w = images_norm.tensor.size()[-2:]
-            processed_results = []
-            for im_id, (input_per_image, image_size) in enumerate(zip(batched_inputs, images_norm.image_sizes)):
-                height = input_per_image.get("height", image_size[0])
-                width = input_per_image.get("width", image_size[1])
+    def _postprocess_inference(self, pred_instances_w_masks, batched_inputs, images_norm):
+        padded_im_h, padded_im_w = images_norm.tensor.size()[-2:]
+        processed_results = []
+        for im_id, (input_per_image, image_size) in enumerate(zip(batched_inputs, images_norm.image_sizes)):
+            height = input_per_image.get("height", image_size[0])
+            width = input_per_image.get("width", image_size[1])
 
-                instances_per_im = pred_instances_w_masks[pred_instances_w_masks.im_inds == im_id]
-                instances_per_im = self.postprocess(
-                    instances_per_im, height, width,
-                    padded_im_h, padded_im_w
-                )
+            instances_per_im = pred_instances_w_masks[pred_instances_w_masks.im_inds == im_id]
+            instances_per_im = self.postprocess(
+                instances_per_im, height, width,
+                padded_im_h, padded_im_w
+            )
 
-                processed_results.append({
-                    "instances": instances_per_im
-                })
+            processed_results.append({
+                "instances": instances_per_im
+            })
 
-            return processed_results
+        return processed_results
 
     def _forward_mask_heads_train(self, proposals, mask_feats, gt_instances):
         # prepare the inputs for mask heads
@@ -278,6 +283,15 @@ class CondInst(nn.Module):
                 per_im_gt_inst.gt_bitmasks = bitmasks
                 per_im_gt_inst.gt_bitmasks_full = bitmasks_full
 
+    def _compute_image_color_similarity(self, downsampled_image_i, image_mask_i):
+        images_lab = color.rgb2lab(downsampled_image_i.byte().permute(1, 2, 0).cpu().numpy())
+        images_lab = torch.as_tensor(images_lab, device=downsampled_image_i.device, dtype=torch.float32)
+        images_lab = images_lab.permute(2, 0, 1)[None]
+        return get_images_color_similarity(
+            images_lab, image_mask_i,
+            self.pairwise_size, self.pairwise_dilation
+        )
+
     def add_bitmasks_from_boxes(self, instances, images, image_masks, im_h, im_w):
         stride = self.mask_out_stride
         start = int(stride // 2)
@@ -292,12 +306,8 @@ class CondInst(nn.Module):
         image_masks = image_masks[:, start::stride, start::stride]
 
         for im_i, per_im_gt_inst in enumerate(instances):
-            images_lab = color.rgb2lab(downsampled_images[im_i].byte().permute(1, 2, 0).cpu().numpy())
-            images_lab = torch.as_tensor(images_lab, device=downsampled_images.device, dtype=torch.float32)
-            images_lab = images_lab.permute(2, 0, 1)[None]
-            images_color_similarity = get_images_color_similarity(
-                images_lab, image_masks[im_i],
-                self.pairwise_size, self.pairwise_dilation
+            images_color_similarity = self._compute_image_color_similarity(
+                downsampled_images[im_i], image_masks[im_i]
             )
 
             per_im_boxes = per_im_gt_inst.gt_boxes.tensor
