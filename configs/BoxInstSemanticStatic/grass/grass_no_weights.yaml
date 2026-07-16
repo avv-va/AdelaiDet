@@ -1,0 +1,24 @@
+_BASE_: "../Base-BoxInstSemanticStatic.yaml"
+MODEL:
+  WEIGHTS: ""
+  PIXEL_STD: [57.375, 57.12, 58.395]
+  BACKBONE:
+    FREEZE_AT: 0
+  RESNETS:
+    DEPTH: 50
+    NORM: "SyncBN"
+  FCOS:
+    NUM_CLASSES: 2
+DATASETS:
+  TRAIN: ("grass_train",)
+  TEST: ("grass_val",)
+SOLVER:
+  IMS_PER_BATCH: 16
+  BASE_LR: 0.01
+  MAX_ITER: 20000
+  STEPS: (14000, 18000)
+  CHECKPOINT_PERIOD: 500
+  WARMUP_ITERS: 2000
+TEST:
+  EVAL_PERIOD: 2000
+OUTPUT_DIR: "output/boxinst_semantic_static/grass/r50_no_weight"
