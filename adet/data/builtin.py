@@ -66,7 +66,7 @@ def register_all_coco(root="datasets"):
 # "<name>_train"/"<name>_val"/"<name>_test" aliases are also registered (falling
 # back to whatever single split exists).
 
-_IMG_EXTS = (".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff")
+_IMG_EXTS = (".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff", ".webp")
 
 # Distinct colors for the semantic (stuff) visualization; cycled if a
 # dataset has more classes than entries.
@@ -120,9 +120,12 @@ def _load_yolo_split(images_dir, labels_dir):
     the mask loader is satisfied -- BoxInst/CondInst derive real masks from the
     boxes. In-memory equivalent of tools/convert_phenobench_to_coco.py.
     """
+    import logging
+
     from PIL import Image
     from detectron2.structures import BoxMode
 
+    logger = logging.getLogger(__name__)
     dicts = []
     label_files = sorted(f for f in os.listdir(labels_dir) if f.endswith(".txt"))
     for img_id, lf in enumerate(label_files):
@@ -130,8 +133,12 @@ def _load_yolo_split(images_dir, labels_dir):
         img_path = _find_image(images_dir, stem)
         if img_path is None:
             continue
-        with Image.open(img_path) as im:
-            W, H = im.size
+        try:
+            with Image.open(img_path) as im:
+                W, H = im.size
+        except OSError as e:  # unreadable image (e.g. truncated cache tile)
+            logger.warning("skipping unreadable image %s: %s", img_path, e)
+            continue
 
         annos = []
         with open(os.path.join(labels_dir, lf)) as fh:
