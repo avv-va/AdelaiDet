@@ -1,0 +1,23 @@
+_BASE_: "../Base-BoxInst.yaml"
+MODEL:
+  WEIGHTS: "detectron2://ImageNetPretrained/MSRA/R-50.pkl"
+  RESNETS:
+    DEPTH: 50
+  FCOS:
+    NUM_CLASSES: 2
+  BOXINST:
+    PAIRWISE:
+      LOSS_TYPE: "original"
+DATASETS:
+  TRAIN: ("VOC_23_verdant_train",)
+  TEST: ("VOC_23_verdant_val",)
+SOLVER:
+  # 260 train imgs, IMS_PER_BATCH 16, 3200 iters ~= 200 epochs
+  IMS_PER_BATCH: 16
+  BASE_LR: 0.01
+  MAX_ITER: 3250  
+  STEPS: (44800, 57600)
+  CHECKPOINT_PERIOD: 500
+TEST:
+  EVAL_PERIOD: 1000
+OUTPUT_DIR: "output/boxinst/voc_23_verdant/r50"
