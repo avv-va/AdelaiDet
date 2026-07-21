@@ -67,6 +67,53 @@ def compute_pairwise_term(mask_logits, pairwise_size, pairwise_dilation):
     return -log_same_prob[:, 0]
 
 
+def compute_pairwise_l1_term(mask_logits, pairwise_size, pairwise_dilation):
+    """L1 pairwise term: |sigmoid(logit_i) - sigmoid(logit_j)| per neighbour.
+
+    Same (N, K, Hm, Wm) output shape as compute_pairwise_term, so the downstream
+    color/box weighting is identical. Unlike the log-prob term it is stable from
+    iteration 0 and therefore needs no warmup.
+    """
+    assert mask_logits.dim() == 4
+
+    from adet.modeling.condinst.condinst import unfold_wo_center
+    probs = mask_logits.sigmoid()
+    probs_unfold = unfold_wo_center(
+        probs, kernel_size=pairwise_size,
+        dilation=pairwise_dilation
+    )
+    pairwise_diff = torch.abs(probs[:, :, None] - probs_unfold)
+
+    return pairwise_diff[:, 0]
+
+
+def compute_pairwise_loss(mask_logits, weights, loss_type,
+                          pairwise_size, pairwise_dilation, warmup_iters, cur_iter):
+    """Weighted, normalized BoxInst pairwise loss for the selected term.
+
+    loss_type "l1"  -> L1 term, no warmup.
+    otherwise       -> original log-prob term, warmed up over warmup_iters.
+    `weights` is the caller-computed color-similarity * in-box mask (already
+    accounts for the per-instance vs. per-class layout differences between heads).
+    """
+    if loss_type == "l1":
+        pairwise_losses = compute_pairwise_l1_term(
+            mask_logits, pairwise_size, pairwise_dilation
+        )
+    else:
+        pairwise_losses = compute_pairwise_term(
+            mask_logits, pairwise_size, pairwise_dilation
+        )
+
+    loss_pairwise = (pairwise_losses * weights).sum() / weights.sum().clamp(min=1.0)
+
+    if loss_type == "l1":
+        return loss_pairwise
+
+    warmup_factor = min(cur_iter / float(warmup_iters), 1.0)
+    return loss_pairwise * warmup_factor
+
+
 def dice_coefficient(x, target):
     eps = 1e-5
     n_inst = x.size(0)
@@ -150,6 +197,7 @@ class DynamicMaskHead(nn.Module):
         self.pairwise_dilation = cfg.MODEL.BOXINST.PAIRWISE.DILATION
         self.pairwise_color_thresh = cfg.MODEL.BOXINST.PAIRWISE.COLOR_THRESH
         self._warmup_iters = cfg.MODEL.BOXINST.PAIRWISE.WARMUP_ITERS
+        self.pairwise_loss_type = cfg.MODEL.BOXINST.PAIRWISE.LOSS_TYPE
 
         weight_nums, bias_nums = [], []
         for l in range(self.num_layers):
@@ -250,16 +298,12 @@ class DynamicMaskHead(nn.Module):
 
                     loss_prj_term = compute_project_term(mask_scores, gt_bitmasks)
 
-                    pairwise_losses = compute_pairwise_term(
-                        mask_logits, self.pairwise_size,
-                        self.pairwise_dilation
-                    )
-
                     weights = (image_color_similarity >= self.pairwise_color_thresh).float() * gt_bitmasks.float()
-                    loss_pairwise = (pairwise_losses * weights).sum() / weights.sum().clamp(min=1.0)
-
-                    warmup_factor = min(self._iter.item() / float(self._warmup_iters), 1.0)
-                    loss_pairwise = loss_pairwise * warmup_factor
+                    loss_pairwise = compute_pairwise_loss(
+                        mask_logits, weights, self.pairwise_loss_type,
+                        self.pairwise_size, self.pairwise_dilation,
+                        self._warmup_iters, self._iter.item(),
+                    )
 
                     losses.update({
                         "loss_prj": loss_prj_term,

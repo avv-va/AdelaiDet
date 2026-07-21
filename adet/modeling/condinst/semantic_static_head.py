@@ -2,7 +2,7 @@ import torch
 from torch import nn
 
 from .dynamic_mask_head import (
-    dice_coefficient, compute_max_labeling, compute_pairwise_term,
+    dice_coefficient, compute_max_labeling, compute_pairwise_loss,
 )
 from adet.utils.comm import aligned_bilinear
 
@@ -46,6 +46,7 @@ class SemanticSegHead(nn.Module):
         self.pairwise_dilation = cfg.MODEL.BOXINST.PAIRWISE.DILATION
         self.pairwise_color_thresh = cfg.MODEL.BOXINST.PAIRWISE.COLOR_THRESH
         self._warmup_iters = cfg.MODEL.BOXINST.PAIRWISE.WARMUP_ITERS
+        self.pairwise_loss_type = cfg.MODEL.BOXINST.PAIRWISE.LOSS_TYPE
         self.register_buffer("_iter", torch.zeros([1]))
 
         # This head generates no dynamic parameters. The attribute is read by
@@ -97,13 +98,13 @@ class SemanticSegHead(nn.Module):
             color_sim = color_sim.repeat_interleave(num_classes, dim=0).to(dtype=mask_feats.dtype)
 
             loss_prj_term = compute_max_labeling(mask_logits, gt_bitmasks)
-            pairwise_losses = compute_pairwise_term(mask_logits, self.pairwise_size, self.pairwise_dilation)
 
             weights = (color_sim >= self.pairwise_color_thresh).float() * gt_bitmasks.float()
-            loss_pairwise = (pairwise_losses * weights).sum() / weights.sum().clamp(min=1.0)
-
-            warmup_factor = min(self._iter.item() / float(self._warmup_iters), 1.0)
-            loss_pairwise = loss_pairwise * warmup_factor
+            loss_pairwise = compute_pairwise_loss(
+                mask_logits, weights, self.pairwise_loss_type,
+                self.pairwise_size, self.pairwise_dilation,
+                self._warmup_iters, self._iter.item(),
+            )
 
             losses.update({"loss_prj": loss_prj_term, "loss_pairwise": loss_pairwise})
         else:

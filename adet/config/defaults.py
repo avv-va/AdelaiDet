@@ -260,6 +260,12 @@ _C.MODEL.BOXINST.PAIRWISE.SIZE = 3
 _C.MODEL.BOXINST.PAIRWISE.DILATION = 2
 _C.MODEL.BOXINST.PAIRWISE.WARMUP_ITERS = 10000
 _C.MODEL.BOXINST.PAIRWISE.COLOR_THRESH = 0.3
+# Which pairwise term to use during box-supervised training:
+#   "original" - BoxInst log-probability "same-prediction" term, ramped in over
+#                WARMUP_ITERS (default; existing configs are unaffected).
+#   "l1"       - L1 distance between neighbouring mask probabilities. Stable from
+#                iteration 0, so WARMUP_ITERS is ignored for this variant.
+_C.MODEL.BOXINST.PAIRWISE.LOSS_TYPE = "original"
 
 # ---------------------------------------------------------------------------- #
 # CondInst-Semantic Options (per-class dynamic mask head, see CondInstSemantic)
