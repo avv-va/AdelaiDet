@@ -47,6 +47,7 @@ class SemanticSegHead(nn.Module):
         self.pairwise_color_thresh = cfg.MODEL.BOXINST.PAIRWISE.COLOR_THRESH
         self._warmup_iters = cfg.MODEL.BOXINST.PAIRWISE.WARMUP_ITERS
         self.pairwise_loss_type = cfg.MODEL.BOXINST.PAIRWISE.LOSS_TYPE
+        self.projection_inflation = cfg.MODEL.BOXINST.PROJECTION_INFLATION
         self.register_buffer("_iter", torch.zeros([1]))
 
         # This head generates no dynamic parameters. The attribute is read by
@@ -97,7 +98,10 @@ class SemanticSegHead(nn.Module):
             color_sim = torch.cat(image_color_similarity, dim=0)  # (num_images, K-1, Hm, Wm)
             color_sim = color_sim.repeat_interleave(num_classes, dim=0).to(dtype=mask_feats.dtype)
 
-            loss_prj_term = compute_max_labeling(mask_logits, gt_bitmasks)
+            loss_prj_term = compute_max_labeling(
+                mask_logits, gt_bitmasks,
+                inflate=self.projection_inflation == "inflation",
+            )
 
             weights = (color_sim >= self.pairwise_color_thresh).float() * gt_bitmasks.float()
             loss_pairwise = compute_pairwise_loss(

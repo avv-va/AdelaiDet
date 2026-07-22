@@ -5,19 +5,64 @@ from torch import nn
 from adet.utils.comm import compute_locations, aligned_bilinear
 
 
-def compute_project_term(mask_scores, gt_bitmasks):
-    mask_losses_y = dice_coefficient(
-        mask_scores.max(dim=2, keepdim=True)[0],
-        gt_bitmasks.max(dim=2, keepdim=True)[0]
+def _add_best_neighbor_positives(positives, foreground, cls_mask):
+    from adet.modeling.condinst.condinst import unfold_wo_center
+
+    dilation = 1
+    kernel_size = 3
+    neighbor_vals = unfold_wo_center(foreground, kernel_size=kernel_size, dilation=dilation)  # B, C, K*K-1, H, W
+    neighbor_in_box = unfold_wo_center(cls_mask, kernel_size=kernel_size, dilation=dilation) > 0  # B, C, K*K-1, H, W
+
+    eligible = neighbor_in_box  # rank only in-box neighbours
+    neighbor_vals = neighbor_vals.masked_fill(~eligible, float('-inf'))  # rank only eligible neighbours
+    best = neighbor_vals.argmax(dim=2)  # B, C, H, W index of highest eligible neighbour in 0..K*K-2
+    sel = F.one_hot(best, num_classes=neighbor_vals.shape[2]).permute(0, 1, 4, 2, 3).to(positives.dtype)
+    sel = sel * positives.unsqueeze(2) * eligible.to(positives.dtype)
+
+    padding = (kernel_size + (dilation - 1) * (kernel_size - 1)) // 2
+    size = kernel_size ** 2
+    b, c, _, h, w = sel.shape
+    sel_full = torch.zeros(b, c, size, h, w, device=sel.device, dtype=sel.dtype)
+    sel_full[:, :, :size // 2] = sel[:, :, :size // 2]
+    sel_full[:, :, size // 2 + 1:] = sel[:, :, size // 2:]
+    folded = F.fold(
+        sel_full.reshape(b, c * size, h * w), output_size=(h, w),
+        kernel_size=kernel_size, padding=padding, dilation=dilation,
     )
-    mask_losses_x = dice_coefficient(
-        mask_scores.max(dim=3, keepdim=True)[0],
-        gt_bitmasks.max(dim=3, keepdim=True)[0]
-    )
-    return (mask_losses_x + mask_losses_y).mean()
+    neighbor_positives = (folded > 0).to(positives.dtype)
+    return (positives + neighbor_positives > 0).to(positives.dtype)
 
 
-def compute_max_labeling(mask_logits, gt_bitmasks):
+def compute_project_term(mask_scores, gt_bitmasks, inflate=False):
+    if not inflate:
+        mask_losses_y = dice_coefficient(
+            mask_scores.max(dim=2, keepdim=True)[0],
+            gt_bitmasks.max(dim=2, keepdim=True)[0]
+        )
+        mask_losses_x = dice_coefficient(
+            mask_scores.max(dim=3, keepdim=True)[0],
+            gt_bitmasks.max(dim=3, keepdim=True)[0]
+        )
+        return (mask_losses_x + mask_losses_y).mean()
+
+    # Inflate version
+    cls_mask = (gt_bitmasks > 0).float()
+    foreground = mask_scores.detach() * cls_mask
+    col_max = foreground.amax(dim=2, keepdim=True)
+    row_max = foreground.amax(dim=3, keepdim=True)
+    normalizer = torch.minimum(col_max, row_max) * cls_mask
+    positives = (foreground > (0.95 * normalizer)).float() * cls_mask
+    positives = _add_best_neighbor_positives(positives, foreground, cls_mask)
+
+    weights = torch.maximum(positives, 1.0 - cls_mask)
+    eps = 1
+    numerator = 2 * (mask_scores * positives).sum(dim=(2, 3))
+    denominator = (mask_scores * weights).pow(2).sum(dim=(2, 3)) + positives.sum(dim=(2, 3))
+    loss = 1. - (numerator + eps) / (denominator + eps)
+    return loss.mean()
+
+
+def compute_max_labeling(mask_logits, gt_bitmasks, inflate=False):
     # batch_size = gt_bitmasks.shape[0]
     cls_mask = (gt_bitmasks > 0).float()
     foreground = mask_logits.detach().sigmoid() * cls_mask
@@ -26,6 +71,8 @@ def compute_max_labeling(mask_logits, gt_bitmasks):
 
     normalizer = torch.minimum(col_max, row_max) * cls_mask
     positives = (foreground > (0.95 * normalizer)).float() * cls_mask
+    if inflate:
+        positives = _add_best_neighbor_positives(positives, foreground, cls_mask)
     col_box_height = cls_mask.sum(dim=2, keepdim=True)
     col_pos_count = positives.sum(dim=2, keepdim=True)
     pos_weights = positives * (col_box_height / col_pos_count.clamp(min=1.0))
@@ -198,6 +245,7 @@ class DynamicMaskHead(nn.Module):
         self.pairwise_color_thresh = cfg.MODEL.BOXINST.PAIRWISE.COLOR_THRESH
         self._warmup_iters = cfg.MODEL.BOXINST.PAIRWISE.WARMUP_ITERS
         self.pairwise_loss_type = cfg.MODEL.BOXINST.PAIRWISE.LOSS_TYPE
+        self.projection_inflation = cfg.MODEL.BOXINST.PROJECTION_INFLATION
 
         weight_nums, bias_nums = [], []
         for l in range(self.num_layers):
@@ -296,7 +344,10 @@ class DynamicMaskHead(nn.Module):
                     image_color_similarity = torch.cat([x.image_color_similarity for x in gt_instances])
                     image_color_similarity = image_color_similarity[gt_inds].to(dtype=mask_feats.dtype)
 
-                    loss_prj_term = compute_project_term(mask_scores, gt_bitmasks)
+                    loss_prj_term = compute_project_term(
+                        mask_scores, gt_bitmasks,
+                        inflate=self.projection_inflation == "inflation",
+                    )
 
                     weights = (image_color_similarity >= self.pairwise_color_thresh).float() * gt_bitmasks.float()
                     loss_pairwise = compute_pairwise_loss(

@@ -254,6 +254,12 @@ _C.MODEL.BOXINST = CN()
 # Whether to enable BoxInst
 _C.MODEL.BOXINST.ENABLED = False
 _C.MODEL.BOXINST.BOTTOM_PIXELS_REMOVED = 10
+# Optional inflation of the projection-loss positive set. For every selected
+# positive (row/column max), also promote its single best eligible 8-neighbor
+# (inside the GT box, per _add_best_neighbor_positives). Values:
+#   "no_inflation" - default; existing behavior, existing configs unaffected.
+#   "inflation"    - inflate the positives before computing the projection loss.
+_C.MODEL.BOXINST.PROJECTION_INFLATION = "no_inflation"
 
 _C.MODEL.BOXINST.PAIRWISE = CN()
 _C.MODEL.BOXINST.PAIRWISE.SIZE = 3
